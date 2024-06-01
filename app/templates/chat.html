@@ -1,0 +1,107 @@
+{% extends './layout.html' %}
+
+{% block title %} Chatbot con Flask {% endblock %}
+
+{% block body %}
+<div id="chat-container">
+    <div id="chat-box">
+        {% for chat in data['chats'] %}
+        <div class="message user-message">{{ data['userName'] }}: {{ chat.usuario }}</div>
+        <div class="message bot-message">{{ chat.bot }}</div>
+        {% endfor %}
+    </div>
+    <input type="text" id="message-input" placeholder="Escribe tu mensaje aquí...">
+    <button id="send-button">Enviar</button>
+</div>
+
+<script>
+    let index = 0; // Indice para seguir el progreso de las preguntas
+    const userName = "{{ data['userName'] }}";
+    const chatBox = document.getElementById('chat-box');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    // Array para almacenar las respuestas del usuario
+    var userResponses = [];
+
+    // Array de preguntas
+    var questions = [
+        "From 1 to 10 how you rate your sleep quality (10 the best quality and 1 the worst quality)",
+        "Do you have a feeling of depression? On a scale of 1 to 10, how strong is the feeling? (10 is the higher & 1 the lower)",
+        "From 1 to 10 how stressed do you feel? (10 is the higher & 1 the lower)",
+        "From 1 to 10 how anxious do you feel? (10 is the higher & 1 the lower)"
+    ];
+
+    // Mensajes iniciales
+    appendBotMessage("Bot: Welcome to the Mental health Expert System!");
+    appendBotMessage("Bot: Please provide us following information:");
+    askNextQuestion(); // Iniciar flujo de preguntas
+    
+    // Función para crear mensajes del bot
+    function appendBotMessage(message) {
+        var botMessageElement = document.createElement('div');
+        botMessageElement.className = 'message bot-message';
+        botMessageElement.textContent = message;
+        chatBox.appendChild(botMessageElement);
+    }
+
+    // Función para enviar todas las respuestas al servidor
+    function sendAllResponsesToServer(responses) {
+        
+        fetch('/chat-messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'message=' + encodeURIComponent(responses)
+            }).then(response => response.json())
+            .then(data => {
+                // Agregar respuesta del bot al chat
+                var botMessageElement = document.createElement('div');
+                botMessageElement.className = 'message bot-message';
+                botMessageElement.textContent = data.response;
+                chatBox.appendChild(botMessageElement);
+
+                // Desplazarse al final del chat
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            )
+
+    }
+
+    // Manejar clic en el botón de enviar
+    sendButton.addEventListener('click', function() {
+        var message = messageInput.value.trim();
+        if (message) {
+            appendUserMessage(message);
+            userResponses.push(message); // Guardar la respuesta del usuario
+            messageInput.value = '';
+            
+            // Preguntar la siguiente pregunta o enviar todas las respuestas
+            if (index < questions.length) {
+                askNextQuestion();
+            } else {
+                sendAllResponsesToServer(userResponses);
+            }
+        }
+    });
+
+    // Función para agregar mensaje del usuario al chat
+    function appendUserMessage(message) {
+        var userMessageElement = document.createElement('div');
+        userMessageElement.className = 'message user-message';
+        userMessageElement.textContent = userName + ': ' + message;
+        chatBox.appendChild(userMessageElement);
+    }
+
+    // Función para hacer la siguiente pregunta
+    function askNextQuestion() {
+        if (index < questions.length) {
+            appendBotMessage("Bot: " + questions[index]); // Presentar la pregunta al usuario
+            index++;
+        }
+    
+    
+    }
+</script>
+{% endblock %}
