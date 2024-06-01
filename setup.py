@@ -1,7 +1,7 @@
 from cx_Freeze import setup, Executable
 
 # Reemplaza "script.py" con el nombre de tu script
-executables = [Executable("script.py", base="Win32GUI", icon="path/to/icon.ico")]
+executables = [Executable("gui.py", base="Win32GUI")]
 
 setup(
     name="MyApp",
