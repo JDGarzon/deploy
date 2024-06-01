@@ -12,7 +12,6 @@ collection = db['chats']
 users_collection = db['user']
 users = {}
 session={}
-expert = PsychologicalAssessment(model)
 
 def generate_password_hash(password):
     """Genera un hash de la contraseña"""
@@ -47,6 +46,10 @@ def signup():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        name = request.form['name']
+        soc = int(request.form['soc'])
+        gen = request.form['gen']
+        age = int(request.form['age'])
         # Validar si el usuario ya existe
         existing_user = users_collection.find_one({'username': username})
         if existing_user:
@@ -58,6 +61,10 @@ def signup():
             users_collection.insert_one({
                 'username': username,
                 'password': hashed_password,
+                'name':name,
+                'economic_level':soc,
+                'gen':gen,
+                'age':age,
                 'chats': []
             })
             flash('Registro exitoso. Ahora puedes iniciar sesión.')
@@ -77,6 +84,8 @@ def chatMessages():
     '''
     interaction with the expert here
     '''
+    user = users_collection.find_one({'username': session['username']})
+    
     user_message = request.form['message']
     lista_strings = user_message.split(',')
 
@@ -115,7 +124,7 @@ def chatMessages():
         user_anxiety_case = 1
     else:
         user_anxiety_case = 0
-    print(lista_enteros)
+    
     evidence ={
       'Anxiety': user_anxiety_case,
       'Depression': user_depression_case, 
@@ -123,14 +132,20 @@ def chatMessages():
       'SleepProblems': user_sleep_case,  
     }
     psychological_Issue_probability = inference.query(variables=['PsychologicalIssue'], evidence=evidence)
-
-    expert = PsychologicalAssessment(model)
+    probabilities = psychological_Issue_probability.values
+    mild=probabilities[0]
+    moderate=probabilities[1]
+    severe=probabilities[2]
+    print(psychological_Issue_probability)
+    expert = PsychologicalAssessment(model, user["age"],user["name"],user["economic_level"],user["gen"])
     expert.reset()
     expert.declare(Fact(sleep_quality=user_sleep_quality_input))
     expert.declare(Fact(depression_level=user_depression_level_input))
     expert.declare(Fact(stress_level=user_stress_level_input))
     expert.declare(Fact(anxiety_level=user_anxiety_level_input))
-    expert.declare(Fact(psycological_issue_probability=psychological_Issue_probability))
+    expert.declare(Fact(mild_issue_probability=mild))
+    expert.declare(Fact(moderate_issue_probability=moderate))
+    expert.declare(Fact(severe_issue_probability=severe))
     expert.run()
     
     responses=expert.get_responses()
@@ -167,6 +182,3 @@ def chatMessages():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-def create_app():
-    return app

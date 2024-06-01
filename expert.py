@@ -64,12 +64,32 @@ from experta import *
 
 class PsychologicalAssessment(KnowledgeEngine):
 
+    def __init__(self, model, age,name,socioeconomic_level,gender):
+        super().__init__()
+        self.responses = []
+        self.age = age
+        self.name = name
+        self.socioeconomic_level = socioeconomic_level
+        self.gender = gender
+        self.declare(Fact(age = age))
+        self.declare(Fact(socioeconomic_level = socioeconomic_level))
+
     def get_responses(self):
         return self.responses
 
-    def __init__(self, model):
-        super().__init__()
-        self.responses = []
+    @Rule(Fact(mild_issue_probability=MATCH.mild),
+          Fact(moderate_issue_probability=MATCH.moderate),
+          Fact(severe_issue_probability=MATCH.severe))
+    def mild_greater(self, mild, moderate, severe):
+        if mild > moderate and mild > severe:
+            self.declare(Fact(major_issue='mild'))
+            print("The major issue is mild")
+        elif moderate > mild and moderate> severe:
+            self.declare(Fact(major_issue='moderate'))
+            print("The major issue is moderate")
+        else:
+            self.declare(Fact(major_issue='severe'))
+            print("The major issue is severe")
 
     @Rule(Fact(sleep_quality=P(lambda x: x >= 1) & P(lambda x: x <= 3)))
     def high_sleep(self):
@@ -79,6 +99,7 @@ class PsychologicalAssessment(KnowledgeEngine):
     def almost_moderate_sleep(self):
         self.responses.append("Be careful though, your current sleep level is good but the score is close to the moderate level. \n")
         self.responses.append("As a recommendation, be careful and watch your sleep practices. \n")
+        
 
     @Rule(Fact(sleep_quality=P(lambda x: x >= 4) & P(lambda x: x <= 6)))
     def moderate_sleep(self):
@@ -90,6 +111,7 @@ class PsychologicalAssessment(KnowledgeEngine):
         self.responses.append("3. Eliminate distractions. Avoid using electronic devices before bed \n")
         self.responses.append("4. Use the bed only for sleeping. \n")
         self.responses.append("Seek professional help if the practices do not improve your sleep. \n")
+        
 
     @Rule(Fact(sleep_quality=P(lambda x: x == 3)))
     def almost_low_sleep(self):
@@ -198,22 +220,42 @@ class PsychologicalAssessment(KnowledgeEngine):
 
     # ----------------- Psychological Issue Probability -------------------------------
 
-    @Rule(Fact(psychological_issue_probability=P(lambda x: x > 0.0) & P(lambda x: x < 0.4)))
+    @Rule(Fact(major_issue="mild"))
     def low_psychological_issue_probability(self):
         self.responses.append("Your probability of having a psychological issue is low. Keep up with your healthy lifestyle! \n")
+        self.declare(Fact(risk = 'mild'))
 
-    @Rule(Fact(psychological_issue_probability=P(lambda x: x > 0.3) & P(lambda x: x < 0.7)))
+    @Rule(Fact(major_issue="moderate"))
     def moderate_psychological_issue_probability(self):
         self.responses.append("You have a moderate probability of having a psychological issue. \n")
         self.responses.append("It's important to monitor your mental health and take preventive measures. \n")
         self.responses.append("We recommend that you seek support from mental health professionals and start attending therapy. It will be a great help! \n")
+        self.declare(Fact(risk = 'moderate'))
 
-    @Rule(Fact(psychological_issue_probability=P(lambda x: x > 0.6)))
+    @Rule(Fact(major_issue="severe"))
     def high_psychological_issue_probability(self):
         self.responses.append("Your probability of having a psychological issue is high. \n")
         self.responses.append("We strongly recommend seeking professional help to address potential psychological issues. \n")
         self.responses.append("Professional support can be vital in managing and improving your mental health. \n")
         self.responses.append("You are not alone, lean on those who can help you. \n")
+        self.declare(Fact(risk = 'severe'))
+
+    @Rule(AND(Fact(age=P(lambda x: x >= 13) & P(lambda x: x <= 21)), OR(Fact(major_issue = "moderate"), Fact(major_issue = "severe"))))
+    def young_age_risk(self):
+        self.responses.append("Young age detected. Consider stress and anxiety related to academic pressure and social relationships.")
+
+    @Rule(AND(Fact(age=P(lambda x: x >= 60)), OR(Fact(major_issue = "moderate"), Fact(major_issue = "severe"))))
+    def elderly_age_risk(self):
+        self.responses.append("Elderly age detected. Consider risks of depression and anxiety due to loneliness and health problems.")
+
+    # Nuevas reglas considerando el nivel socioeconómico
+    @Rule(AND(Fact(socioeconomic_level=P(lambda x: x < 3)), OR(Fact(major_issue = "moderate"), Fact(major_issue = "severe"))))
+    def low_socioeconomic_risk(self):
+        self.responses.append("Low socioeconomic level detected. Higher risk of stress and anxiety due to financial insecurity and limited access to healthcare.")
+
+    @Rule(AND(Fact(socioeconomic_level=P(lambda x: x > 3)), OR(Fact(major_issue = "moderate"), Fact(major_issue = "severe"))))
+    def high_socioeconomic_risk(self):
+        self.responses.append("High socioeconomic level detected. Consider risks of anxiety and stress related to maintaining status and high expectations.")
 
 def main():
   user_sleep_case = 0
@@ -264,14 +306,20 @@ def main():
   }
 
   psychological_Issue_probability = inference.query(variables=['PsychologicalIssue'], evidence=evidence)
-
-  expert = PsychologicalAssessment(model)
+  probabilities = psychological_Issue_probability.values
+  mild=probabilities[0]
+  moderate=probabilities[1]
+  severe=probabilities[2]
+  print(psychological_Issue_probability)
+  expert = PsychologicalAssessment(model, 15,"name",1,"M")
   expert.reset()
   expert.declare(Fact(sleep_quality=user_sleep_quality_input))
   expert.declare(Fact(depression_level=user_depression_level_input))
   expert.declare(Fact(stress_level=user_stress_level_input))
   expert.declare(Fact(anxiety_level=user_anxiety_level_input))
-  expert.declare(Fact(psycological_issue_probability=psychological_Issue_probability))
+  expert.declare(Fact(mild_issue_probability=mild))
+  expert.declare(Fact(moderate_issue_probability=moderate))
+  expert.declare(Fact(severe_issue_probability=severe))
   expert.run()
 
 if __name__ == "__main__":
