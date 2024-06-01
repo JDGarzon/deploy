@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "chatbot"
+version = "1"
+description = ""
+authors = ["JDGarzon <93989744+JDGarzon@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
