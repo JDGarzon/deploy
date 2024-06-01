@@ -6,8 +6,9 @@ dnspython==2.6.1
 experta==1.9.4
 filelock==3.14.0
 Flask==3.0.3
-frozendict==1.2
+frozendict==2.4.4
 fsspec==2024.5.0
+gunicorn==22.0.0
 intel-openmp==2021.4.0
 itsdangerous==2.2.0
 Jinja2==3.1.4
@@ -38,4 +39,5 @@ torch==2.3.0
 tqdm==4.66.4
 typing_extensions==4.12.0
 tzdata==2024.1
+waitress==3.0.0
 Werkzeug==3.0.3
